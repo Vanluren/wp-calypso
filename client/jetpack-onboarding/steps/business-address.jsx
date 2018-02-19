@@ -30,6 +30,7 @@ class JetpackOnboardingBusinessAddressStep extends React.PureComponent {
 		state: '',
 		street: '',
 		zip: '',
+		country: '',
 	};
 
 	state = get( this.props.settings, 'businessAddress' ) || this.constructor.emptyState;
@@ -55,6 +56,7 @@ class JetpackOnboardingBusinessAddressStep extends React.PureComponent {
 			city: translate( 'City' ),
 			state: translate( 'State' ),
 			zip: translate( 'ZIP Code' ),
+			country: translate( 'Country' ),
 		};
 	}
 
