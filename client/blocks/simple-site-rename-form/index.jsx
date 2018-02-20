@@ -4,7 +4,7 @@
  */
 import React, { Component } from 'react';
 import { localize } from 'i18n-calypso';
-import { get, flow, isEmpty, inRange } from 'lodash';
+import { deburr, get, flow, isEmpty, inRange } from 'lodash';
 import Gridicon from 'gridicons';
 import { connect } from 'react-redux';
 
@@ -32,8 +32,10 @@ export class SimpleSiteRenameForm extends Component {
 
 	state = {
 		showDialog: false,
+		deburredDomainFieldValue: '',
 		domainFieldValue: '',
 		domainFieldError: '',
+		isDeburred: false,
 	};
 
 	onConfirm = () => {
@@ -41,7 +43,7 @@ export class SimpleSiteRenameForm extends Component {
 		// @TODO: Give ability to chose whether or not to discard the original domain name.
 		const discard = true;
 
-		this.props.requestSiteRename( selectedSiteId, this.state.domainFieldValue, discard );
+		this.props.requestSiteRename( selectedSiteId, this.state.deburredDomainFieldValue, discard );
 	};
 
 	getDomainValidationMessage( domain ) {
@@ -70,7 +72,7 @@ export class SimpleSiteRenameForm extends Component {
 	}
 
 	onSubmit = event => {
-		const domainFieldError = this.getDomainValidationMessage( this.state.domainFieldValue );
+		const domainFieldError = this.getDomainValidationMessage( this.state.deburredDomainFieldValue );
 
 		this.setState( { domainFieldError } );
 		! domainFieldError && this.showConfirmationDialog();
@@ -87,11 +89,15 @@ export class SimpleSiteRenameForm extends Component {
 	onFieldChange = event => {
 		const domainFieldValue = get( event, 'target.value' );
 		const shouldUpdateError = ! isEmpty( this.state.domainFieldError );
+		const deburredDomainFieldValue = deburr( domainFieldValue );
+		const isDeburred = deburredDomainFieldValue !== domainFieldValue;
 
 		this.setState( {
 			domainFieldValue,
+			deburredDomainFieldValue,
+			isDeburred,
 			...( shouldUpdateError && {
-				domainFieldError: this.getDomainValidationMessage( domainFieldValue ),
+				domainFieldError: this.getDomainValidationMessage( deburredDomainFieldValue ),
 			} ),
 		} );
 	};
@@ -100,19 +106,19 @@ export class SimpleSiteRenameForm extends Component {
 		const { currentDomain, currentDomainSuffix, isSiteRenameRequesting, translate } = this.props;
 		const currentDomainPrefix = get( currentDomain, 'name', '' ).replace( currentDomainSuffix, '' );
 		const isWPCOM = get( currentDomain, 'type' ) === 'WPCOM';
-		const { domainFieldError } = this.state;
+		const { deburredDomainFieldValue, domainFieldError, domainFieldValue, isDeburred } = this.state;
 		const isDisabled =
 			! isWPCOM ||
-			! this.state.domainFieldValue ||
+			! domainFieldValue ||
 			!! domainFieldError ||
-			this.state.domainFieldValue === currentDomainPrefix;
+			domainFieldValue === currentDomainPrefix;
 
 		return (
 			<div className="simple-site-rename-form">
 				<ConfirmationDialog
 					isVisible={ this.state.showDialog }
 					onClose={ this.onDialogClose }
-					newDomainName={ this.state.domainFieldValue }
+					newDomainName={ deburredDomainFieldValue }
 					currentDomainName={ currentDomainPrefix }
 					onConfirm={ this.onConfirm }
 				/>
@@ -121,13 +127,22 @@ export class SimpleSiteRenameForm extends Component {
 						<FormSectionHeading>{ translate( 'Edit Domain Name' ) }</FormSectionHeading>
 						<FormTextInputWithAffixes
 							type="text"
-							value={ this.state.domainFieldValue }
+							value={ domainFieldValue }
 							suffix={ currentDomainSuffix }
 							onChange={ this.onFieldChange }
 							placeholder={ currentDomainPrefix }
 							isError={ !! domainFieldError }
 						/>
 						{ domainFieldError && <FormInputValidation isError text={ domainFieldError } /> }
+						{ /* @TODO translate copy once finalised */ }
+						{ isDeburred && (
+							<FormInputValidation
+								isWarning
+								text={
+									'Only basic letters and numbers are allowed. (final copy should better explain this)'
+								}
+							/>
+						) }
 						<div className="simple-site-rename-form__footer">
 							<div className="simple-site-rename-form__info">
 								<Gridicon icon="info-outline" size={ 18 } />
